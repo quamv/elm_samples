@@ -111,12 +111,7 @@ view model =
             List.map waveView model.waves
 
         pauseBtnText =
-            case model.run of
-                True ->
-                    "Pause"
-
-                False ->
-                    "Resume"
+            if model.run then "Pause" else "Resume"
     in
     div [ style mainContainerStyle ]
         [ div [ style psuedoCanvasStyle, onMyClick ClickXY ]
@@ -128,19 +123,11 @@ view model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model.run of
-        True ->
-            Sub.batch
-                [ AnimationFrame.diffs Frame
-                ]
-
-        False ->
-            Sub.none
-
+    if model.run then Sub.batch [ AnimationFrame.diffs Frame ]
+    else Sub.none
 
 
 -- when clicking in child div, incorporate offset of parent
-
 
 childdivdecoder : Json.Decoder XYPoint
 childdivdecoder =
@@ -248,12 +235,7 @@ nextAnimationFrame model =
             updatedwavesfiltered ++ newwaves
 
         newrunstate =
-            case List.length allwaves == 0 of
-                True ->
-                    False
-
-                False ->
-                    model.run
+            if List.length allwaves == 0 then False else model.run
     in
     ( { model
         | waves = allwaves
@@ -273,12 +255,7 @@ updateWave oldwave =
                 , opacity =
                     oldwave.opacity - settings.wavesettings.attenuationFactor
                 , crests =
-                    case oldwave.radius > oldwave.wavelength of
-                        True ->
-                            0
-
-                        False ->
-                            oldwave.crests
+                    if oldwave.radius > oldwave.wavelength then 0 else oldwave.crests
             }
     in
     newwave
