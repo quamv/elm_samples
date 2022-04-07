@@ -1,106 +1,110 @@
 module Main exposing (..)
 
+import AnimationFrame exposing (diffs)
 import Array exposing (..)
+import Debug exposing (log)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import Time exposing (..)
-import AnimationFrame exposing (diffs)
 import Json.Decode as Json
-import Debug exposing (log)
+import Time exposing (..)
 
 
-type alias XYPoint = {
-    x: Float
-    ,y: Float
+type alias XYPoint =
+    { x : Float
+    , y : Float
     }
 
-type alias Wave = {
-    radius: Float
-    ,center: XYPoint
-    ,wavelength: Float
-    ,opacity: Float
-    ,crests: Int
+
+type alias Wave =
+    { radius : Float
+    , center : XYPoint
+    , wavelength : Float
+    , opacity : Float
+    , crests : Int
     }
 
-type alias Model = {
-    waves: List Wave
-    ,run: Bool
+
+type alias Model =
+    { waves : List Wave
+    , run : Bool
     }
 
-type Msg =
-    Frame Time
+
+type Msg
+    = Frame Time
     | ToggleRunState
     | ClickXY XYPoint
 
 
-settings = {
-    wavesettings = {
-        maxopacity = 0.9
-        ,maxborderwidth = 1
-        ,minradius = 2
-        ,growthRate = 0.4 --0.3
-        ,attenuationFactor = 0.005 -- 0.001
+settings =
+    { wavesettings =
+        { maxopacity = 0.9
+        , maxborderwidth = 1
+        , minradius = 2
+        , growthRate = 0.4 --0.3
+        , attenuationFactor = 0.005 -- 0.001
         }
     }
 
+
 main =
-    Html.program {
-        init = init,
-        view = view,
-        update = update,
-        subscriptions = subscriptions
+    Html.program
+        { init = init
+        , view = view
+        , update = update
+        , subscriptions = subscriptions
         }
 
 
-init : (Model, Cmd Msg)
+init : ( Model, Cmd Msg )
 init =
     let
         minradius =
             settings.wavesettings.minradius
     in
-    ({
-        waves = [
-                Wave minradius (XYPoint 100 100) 50 0.8 2
-                ,Wave minradius (XYPoint 500 500) 30 0.8 3
-                ]
-            ,run = True
-        }
-        , Cmd.none
+    ( { waves =
+            [ Wave minradius (XYPoint 100 100) 50 0.8 2
+            , Wave minradius (XYPoint 500 500) 30 0.8 3
+            ]
+      , run = True
+      }
+    , Cmd.none
     )
 
 
-update : Msg -> Model -> (Model, Cmd Msg)
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Frame timediff ->
             nextAnimationFrame model
 
         ToggleRunState ->
-            ({model | run = not model.run},Cmd.none)
+            ( { model | run = not model.run }, Cmd.none )
 
         ClickXY xy ->
-            ({model |
-                waves = model.waves ++ [defaultWave xy.x xy.y]
-                ,run = True
-                }
-             , Cmd.none)
+            ( { model
+                | waves = model.waves ++ [ defaultWave xy.x xy.y ]
+                , run = True
+              }
+            , Cmd.none
+            )
 
 
 view : Model -> Html Msg
 view model =
     let
-        mainContainerStyle = [
-            ("width","800px")
-            ,("margin","0 auto")
-            ,("margin-top","20%")
+        mainContainerStyle =
+            [ ( "width", "800px" )
+            , ( "margin", "0 auto" )
+            , ( "margin-top", "20%" )
             ]
 
-        psuedoCanvasStyle = [
-            ("height","600px")
-            ,("position","relative")
-            ,("background","seagreen")
-            ,("overflow","hidden")
+        psuedoCanvasStyle =
+            [ ( "height", "600px" )
+            , ( "position", "relative" )
+            , ( "background", "seagreen" )
+            , ( "overflow", "hidden" )
             ]
 
         waves =
@@ -108,14 +112,17 @@ view model =
 
         pauseBtnText =
             case model.run of
-                True -> "Pause"
-                False -> "Resume"
+                True ->
+                    "Pause"
+
+                False ->
+                    "Resume"
     in
-    div [style mainContainerStyle] [
-        div [style psuedoCanvasStyle, onMyClick ClickXY]
+    div [ style mainContainerStyle ]
+        [ div [ style psuedoCanvasStyle, onMyClick ClickXY ]
             waves
-        ,button [onClick ToggleRunState, disabled (List.length model.waves == 0)]
-            [text pauseBtnText]
+        , button [ onClick ToggleRunState, disabled (List.length model.waves == 0) ]
+            [ text pauseBtnText ]
         ]
 
 
@@ -123,23 +130,27 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     case model.run of
         True ->
-            Sub.batch [
-                AnimationFrame.diffs Frame
+            Sub.batch
+                [ AnimationFrame.diffs Frame
                 ]
 
         False ->
             Sub.none
 
 
+
 -- when clicking in child div, incorporate offset of parent
+
+
 childdivdecoder : Json.Decoder XYPoint
 childdivdecoder =
     Json.map4
         xyfrom4ints
         (Json.field "offsetX" Json.int)
-        (Json.at ["target","offsetLeft"] Json.int)
+        (Json.at [ "target", "offsetLeft" ] Json.int)
         (Json.field "offsetY" Json.int)
-        (Json.at ["target","offsetTop"] Json.int)
+        (Json.at [ "target", "offsetTop" ] Json.int)
+
 
 parentdivdecoder : Json.Decoder XYPoint
 parentdivdecoder =
@@ -148,17 +159,20 @@ parentdivdecoder =
         (Json.field "offsetX" Json.int)
         (Json.field "offsetY" Json.int)
 
+
 xyfrom4ints : Int -> Int -> Int -> Int -> XYPoint
-xyfrom4ints x1 x2 y1 y2=
+xyfrom4ints x1 x2 y1 y2 =
     XYPoint (toFloat <| x1 + x2) (toFloat <| y1 + y2)
+
 
 xyfromints : Int -> Int -> XYPoint
 xyfromints x y =
     XYPoint (toFloat x) (toFloat y)
 
+
 onMyClick : (XYPoint -> msg) -> Attribute msg
 onMyClick tagger =
-  on "click" (Json.map tagger parentdivdecoder)
+    on "click" (Json.map tagger parentdivdecoder)
 
 
 waveView : Wave -> Html Msg
@@ -170,34 +184,43 @@ waveView wave =
         maxborder =
             settings.wavesettings.maxborderwidth
 
-        wavestyle = [
-            --("border", (toString <| wave.opacity / maxopacity * maxborder) ++ "px solid azure")
-            ("border", "1px solid azure")
-            ,("opacity", (toString wave.opacity))
-            ,("left", (toString <| wave.center.x - wave.radius) ++ "px")
-            ,("top", (toString <| wave.center.y - wave.radius) ++ "px")
-            ,("width", (toString <| wave.radius * 2) ++ "px")
-            ,("height", (toString <| wave.radius * 2) ++ "px")
-            ,("background","transparent")
-            ,("border-radius","50%")
-            ,("position","absolute")
+        wavestyle =
+            [ --("border", (toString <| wave.opacity / maxopacity * maxborder) ++ "px solid azure")
+              ( "border", "1px solid azure" )
+            , ( "opacity", toString wave.opacity )
+            , ( "left", (toString <| wave.center.x - wave.radius) ++ "px" )
+            , ( "top", (toString <| wave.center.y - wave.radius) ++ "px" )
+            , ( "width", (toString <| wave.radius * 2) ++ "px" )
+            , ( "height", (toString <| wave.radius * 2) ++ "px" )
+            , ( "background", "transparent" )
+            , ( "border-radius", "50%" )
+            , ( "position", "absolute" )
             ]
     in
-    div [   style wavestyle
-            ,onWithOptions
-                "click"
-                { stopPropagation = True, preventDefault = True }
-                (Json.map ClickXY childdivdecoder)
-        ] []
+    div
+        [ style wavestyle
+        , onWithOptions
+            "click"
+            { stopPropagation = True, preventDefault = True }
+            (Json.map ClickXY childdivdecoder)
+        ]
+        []
+
 
 defaultWave : Float -> Float -> Wave
 defaultWave x y =
     Wave
         settings.wavesettings.minradius
-        (XYPoint x y) -- wave.center
-        50 -- wave.wavelength
+        (XYPoint x y)
+        -- wave.center
+        50
+        -- wave.wavelength
         settings.wavesettings.maxopacity
-        0 --(wave.crests - 1)
+        0
+
+
+
+--(wave.crests - 1)
 
 
 newCrest : Wave -> Wave
@@ -210,47 +233,52 @@ newCrest wave =
         (wave.crests - 1)
 
 
-nextAnimationFrame : Model -> (Model, Cmd Msg)
+nextAnimationFrame : Model -> ( Model, Cmd Msg )
 nextAnimationFrame model =
     let
         updatedwavesfiltered =
             List.map updateWave model.waves
-            |> List.filter (\n -> n.opacity > 0.05)
+                |> List.filter (\n -> n.opacity > 0.05)
 
         newwaves =
             List.filter (\n -> n.crests > 0 && n.radius > n.wavelength) model.waves
-            |> List.map newCrest
+                |> List.map newCrest
 
         allwaves =
             updatedwavesfiltered ++ newwaves
 
         newrunstate =
             case List.length allwaves == 0 of
-                True ->  False
-                False -> model.run
+                True ->
+                    False
+
+                False ->
+                    model.run
     in
-        ({model |
-            waves = allwaves
-            ,run = newrunstate
-            }, Cmd.none)
+    ( { model
+        | waves = allwaves
+        , run = newrunstate
+      }
+    , Cmd.none
+    )
 
 
 updateWave : Wave -> Wave
 updateWave oldwave =
     let
         newwave =
-            {oldwave |
-                radius =
+            { oldwave
+                | radius =
                     oldwave.radius + settings.wavesettings.growthRate
-
-                ,opacity =
+                , opacity =
                     oldwave.opacity - settings.wavesettings.attenuationFactor
-
-                ,crests =
+                , crests =
                     case oldwave.radius > oldwave.wavelength of
-                        True -> 0
-                        False -> oldwave.crests
+                        True ->
+                            0
+
+                        False ->
+                            oldwave.crests
             }
     in
-        newwave
-
+    newwave
