@@ -95,16 +95,16 @@ view : Model -> Html Msg
 view model =
     let
         mainContainerStyle =
-            [ ( "width", "800px" )
-            , ( "margin", "0 auto" )
-            , ( "margin-top", "20%" )
+            [ style "width" "800px"
+            , style "margin" "0 auto"
+            , style "margin-top" "20%"
             ]
 
         psuedoCanvasStyle =
-            [ ( "height", "600px" )
-            , ( "position", "relative" )
-            , ( "background", "seagreen" )
-            , ( "overflow", "hidden" )
+            [ style "height" "600px"
+            , style "position" "relative"
+            , style "background" "seagreen"
+            , style "overflow" "hidden"
             ]
 
         waves =
@@ -185,16 +185,16 @@ waveView wave =
             settings.wavesettings.maxborderwidth
 
         wavestyle =
-            [ --("border", (toString <| wave.opacity / maxopacity * maxborder) ++ "px solid azure")
-              ( "border", "1px solid azure" )
-            , ( "opacity", toString wave.opacity )
-            , ( "left", (toString <| wave.center.x - wave.radius) ++ "px" )
-            , ( "top", (toString <| wave.center.y - wave.radius) ++ "px" )
-            , ( "width", (toString <| wave.radius * 2) ++ "px" )
-            , ( "height", (toString <| wave.radius * 2) ++ "px" )
-            , ( "background", "transparent" )
-            , ( "border-radius", "50%" )
-            , ( "position", "absolute" )
+            [ --("border", (String.fromFloat <| wave.opacity / maxopacity * maxborder) ++ "px solid azure"
+              style "border" "1px solid azure" 
+            , style "opacity", String.fromFloat wave.opacity 
+            , style "left", (String.fromFloat <| wave.center.x - wave.radius) ++ "px" 
+            , style "top", (String.fromFloat <| wave.center.y - wave.radius) ++ "px" 
+            , style "width", (String.fromFloat <| wave.radius * 2) ++ "px" 
+            , style "height", (String.fromFloat <| wave.radius * 2) ++ "px" 
+            , style "background" "transparent" 
+            , style "border-radius" "50%" 
+            , style "position" "absolute"
             ]
     in
     div
