@@ -8,6 +8,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Json.Decode as Json
 import Time exposing (..)
+import Browser
 
 
 type alias XYPoint =
@@ -37,6 +38,7 @@ type Msg
     | ClickXY XYPoint
 
 
+settings : { wavesettings : { maxopacity : Float, maxborderwidth : number, minradius : number, growthRate : Float, attenuationFactor : Float } }
 settings =
     { wavesettings =
         { maxopacity = 0.9
@@ -49,7 +51,7 @@ settings =
 
 
 main =
-    Html.program
+    Browser.element
         { init = init
         , view = view
         , update = update
@@ -165,20 +167,17 @@ onMyClick tagger =
 waveView : Wave -> Html Msg
 waveView wave =
     let
-        maxopacity =
-            settings.wavesettings.maxopacity
-
-        maxborder =
-            settings.wavesettings.maxborderwidth
+        -- maxopacity = settings.wavesettings.maxopacity
+        -- maxborder = settings.wavesettings.maxborderwidth
 
         wavestyle =
             [ --("border", (String.fromFloat <| wave.opacity / maxopacity * maxborder) ++ "px solid azure"
               style "border" "1px solid azure" 
-            , style "opacity", String.fromFloat wave.opacity 
-            , style "left", (String.fromFloat <| wave.center.x - wave.radius) ++ "px" 
-            , style "top", (String.fromFloat <| wave.center.y - wave.radius) ++ "px" 
-            , style "width", (String.fromFloat <| wave.radius * 2) ++ "px" 
-            , style "height", (String.fromFloat <| wave.radius * 2) ++ "px" 
+            , style "opacity" String.fromFloat wave.opacity 
+            , style "left" (String.fromFloat <| wave.center.x - wave.radius) ++ "px" 
+            , style "top" (String.fromFloat <| wave.center.y - wave.radius) ++ "px" 
+            , style "width" (String.fromFloat <| wave.radius * 2) ++ "px" 
+            , style "height" (String.fromFloat <| wave.radius * 2) ++ "px" 
             , style "background" "transparent" 
             , style "border-radius" "50%" 
             , style "position" "absolute"
