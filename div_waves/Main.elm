@@ -1,6 +1,5 @@
 module Main exposing (..)
 
---import AnimationFrame exposing (diffs)
 import Array exposing (..)
 import Debug exposing (log)
 import Html exposing (..)
@@ -30,6 +29,7 @@ type alias Wave =
 type alias Model =
     { waves : List Wave
     , run : Bool
+    , crestsPerWave : Int
     }
 
 
@@ -37,6 +37,7 @@ type Msg
     = Frame Posix | 
     ToggleRunState
     | ClickXY XYPoint
+    | NewCrestsPerWave String
 
 
 settings : { wavesettings : { maxopacity : Float, maxborderwidth : number, minradius : number, growthRate : Float, attenuationFactor : Float } }
@@ -68,9 +69,10 @@ init _ =
     in
     ( Model 
             [ Wave minradius (XYPoint 100 100) 50 0.8 2
-            , Wave minradius (XYPoint 500 500) 30 0.8 3
+            --, Wave minradius (XYPoint 500 500) 30 0.8 3
             ]
         True
+        1
     , Cmd.none
     )
 
@@ -86,11 +88,29 @@ update msg model =
 
         ClickXY xy ->
             ( { model
-                | waves = model.waves ++ [ defaultWave xy.x xy.y ]
+                | waves = model.waves ++ [ defaultWave model xy.x xy.y ]
                 , run = True
               }
             , Cmd.none
             )
+
+        NewCrestsPerWave str ->
+            let
+                newCrestsPerWaveMaybe = String.toInt str
+
+                newCrestsPerWave = 
+                    case newCrestsPerWaveMaybe of
+                        Just anInt -> anInt
+                        Nothing -> model.crestsPerWave
+            in
+                ( { model
+                    | waves = model.waves
+                    , run = True
+                    , crestsPerWave = newCrestsPerWave
+                }
+                , Cmd.none
+                )
+
 
 
 view : Model -> Html Msg
@@ -109,14 +129,21 @@ view model =
             , style "overflow" "hidden"
             ]
 
+        combinedStyle =
+            psuedoCanvasStyle ++ [ onMyClick ClickXY ]
+
         waves =
-            List.map waveView model.waves
+            List.map waveView (List.filter (\n -> n.crests > 0) model.waves)
 
         pauseBtnText =
             if model.run then "Pause" else "Resume"
     in
     div mainContainerStyle
-        [ div psuedoCanvasStyle --, onMyClick ClickXY ]
+        [
+        div [] [
+            input [ Html.Attributes.attribute "type" "number", value <| String.fromInt model.crestsPerWave, onInput NewCrestsPerWave ] []
+        ] 
+        ,div (psuedoCanvasStyle ++ [ onMyClick ClickXY ]) -- combinedStyle --, onMyClick ClickXY ]
             waves
         , button [ onClick ToggleRunState, disabled (List.length model.waves == 0) ]
             [ text pauseBtnText ]
@@ -172,6 +199,7 @@ waveView wave =
         -- maxopacity = settings.wavesettings.maxopacity
         -- maxborder = settings.wavesettings.maxborderwidth
 
+        wavestyle : List (Attribute Msg)
         wavestyle =
             [ --("border", (String.fromFloat <| wave.opacity / maxopacity * maxborder) ++ "px solid azure"
               style "border" "1px solid azure" 
@@ -184,9 +212,13 @@ waveView wave =
             , style "border-radius" "50%" 
             , style "position" "absolute"
             ]
+
+        combinedStyle : List (Attribute Msg)
+        combinedStyle = wavestyle ++ [ on "click" (Json.map ClickXY parentdivdecoder) ]
     in
     div
-        wavestyle
+        combinedStyle
+        --wavestyle
         -- [ style wavestyle
         -- , onWithOptions
         --     "click"
@@ -196,8 +228,8 @@ waveView wave =
         []
 
 
-defaultWave : Float -> Float -> Wave
-defaultWave x y =
+defaultWave : Model -> Float -> Float -> Wave
+defaultWave model x y =
     Wave
         settings.wavesettings.minradius
         (XYPoint x y)
@@ -205,7 +237,7 @@ defaultWave x y =
         50
         -- wave.wavelength
         settings.wavesettings.maxopacity
-        0
+        model.crestsPerWave
 
 
 

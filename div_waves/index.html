@@ -10550,9 +10550,9 @@ var $elm$core$Basics$never = function (_v0) {
 	}
 };
 var $elm$browser$Browser$element = _Browser_element;
-var $author$project$Main$Model = F2(
-	function (waves, run) {
-		return {run: run, waves: waves};
+var $author$project$Main$Model = F3(
+	function (waves, run, crestsPerWave) {
+		return {crestsPerWave: crestsPerWave, run: run, waves: waves};
 	});
 var $author$project$Main$Wave = F5(
 	function (radius, center, wavelength, opacity, crests) {
@@ -10568,7 +10568,7 @@ var $author$project$Main$settings = {
 var $author$project$Main$init = function (_v0) {
 	var minradius = $author$project$Main$settings.wavesettings.minradius;
 	return _Utils_Tuple2(
-		A2(
+		A3(
 			$author$project$Main$Model,
 			_List_fromArray(
 				[
@@ -10578,16 +10578,10 @@ var $author$project$Main$init = function (_v0) {
 					A2($author$project$Main$XYPoint, 100, 100),
 					50,
 					0.8,
-					2),
-					A5(
-					$author$project$Main$Wave,
-					minradius,
-					A2($author$project$Main$XYPoint, 500, 500),
-					30,
-					0.8,
-					3)
+					2)
 				]),
-			true),
+			true,
+			1),
 		$elm$core$Platform$Cmd$none);
 };
 var $elm$core$Platform$Sub$batch = _Platform_batch;
@@ -10732,15 +10726,15 @@ var $author$project$Main$subscriptions = function (model) {
 				$elm$browser$Browser$Events$onAnimationFrame($author$project$Main$posixToMsg)
 			])) : $elm$core$Platform$Sub$none;
 };
-var $author$project$Main$defaultWave = F2(
-	function (x, y) {
+var $author$project$Main$defaultWave = F3(
+	function (model, x, y) {
 		return A5(
 			$author$project$Main$Wave,
 			$author$project$Main$settings.wavesettings.minradius,
 			A2($author$project$Main$XYPoint, x, y),
 			50,
 			$author$project$Main$settings.wavesettings.maxopacity,
-			0);
+			model.crestsPerWave);
 	});
 var $elm$core$List$filter = F2(
 	function (isGood, list) {
@@ -10801,7 +10795,7 @@ var $author$project$Main$update = F2(
 						model,
 						{run: !model.run}),
 					$elm$core$Platform$Cmd$none);
-			default:
+			case 'ClickXY':
 				var xy = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
@@ -10812,13 +10806,36 @@ var $author$project$Main$update = F2(
 								model.waves,
 								_List_fromArray(
 									[
-										A2($author$project$Main$defaultWave, xy.x, xy.y)
+										A3($author$project$Main$defaultWave, model, xy.x, xy.y)
 									]))
 						}),
 					$elm$core$Platform$Cmd$none);
+			default:
+				var str = msg.a;
+				var newCrestsPerWaveMaybe = $elm$core$String$toInt(str);
+				var newCrestsPerWave = function () {
+					if (newCrestsPerWaveMaybe.$ === 'Just') {
+						var anInt = newCrestsPerWaveMaybe.a;
+						return anInt;
+					} else {
+						return model.crestsPerWave;
+					}
+				}();
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{crestsPerWave: newCrestsPerWave, run: true, waves: model.waves}),
+					$elm$core$Platform$Cmd$none);
 		}
 	});
+var $author$project$Main$ClickXY = function (a) {
+	return {$: 'ClickXY', a: a};
+};
+var $author$project$Main$NewCrestsPerWave = function (a) {
+	return {$: 'NewCrestsPerWave', a: a};
+};
 var $author$project$Main$ToggleRunState = {$: 'ToggleRunState'};
+var $elm$html$Html$Attributes$attribute = $elm$virtual_dom$VirtualDom$attribute;
 var $elm$json$Json$Encode$bool = _Json_wrap;
 var $elm$html$Html$Attributes$boolProperty = F2(
 	function (key, bool) {
@@ -10828,6 +10845,21 @@ var $elm$html$Html$Attributes$boolProperty = F2(
 			$elm$json$Json$Encode$bool(bool));
 	});
 var $elm$html$Html$Attributes$disabled = $elm$html$Html$Attributes$boolProperty('disabled');
+var $author$project$Main$xyfromints = F2(
+	function (x, y) {
+		return A2($author$project$Main$XYPoint, x, y);
+	});
+var $author$project$Main$parentdivdecoder = A3(
+	$elm$json$Json$Decode$map2,
+	$author$project$Main$xyfromints,
+	A2($elm$json$Json$Decode$field, 'offsetX', $elm$json$Json$Decode$int),
+	A2($elm$json$Json$Decode$field, 'offsetY', $elm$json$Json$Decode$int));
+var $author$project$Main$onMyClick = function (tagger) {
+	return A2(
+		$elm$html$Html$Events$on,
+		'click',
+		A2($elm$json$Json$Decode$map, tagger, $author$project$Main$parentdivdecoder));
+};
 var $author$project$Main$waveView = function (wave) {
 	var wavestyle = _List_fromArray(
 		[
@@ -10856,10 +10888,27 @@ var $author$project$Main$waveView = function (wave) {
 			A2($elm$html$Html$Attributes$style, 'border-radius', '50%'),
 			A2($elm$html$Html$Attributes$style, 'position', 'absolute')
 		]);
-	return A2($elm$html$Html$div, wavestyle, _List_Nil);
+	var combinedStyle = _Utils_ap(
+		wavestyle,
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$Events$on,
+				'click',
+				A2($elm$json$Json$Decode$map, $author$project$Main$ClickXY, $author$project$Main$parentdivdecoder))
+			]));
+	return A2($elm$html$Html$div, combinedStyle, _List_Nil);
 };
 var $author$project$Main$view = function (model) {
-	var waves = A2($elm$core$List$map, $author$project$Main$waveView, model.waves);
+	var waves = A2(
+		$elm$core$List$map,
+		$author$project$Main$waveView,
+		A2(
+			$elm$core$List$filter,
+			function (n) {
+				return n.crests > 0;
+			},
+			model.waves));
 	var psuedoCanvasStyle = _List_fromArray(
 		[
 			A2($elm$html$Html$Attributes$style, 'height', '600px'),
@@ -10874,12 +10923,42 @@ var $author$project$Main$view = function (model) {
 			A2($elm$html$Html$Attributes$style, 'margin', '0 auto'),
 			A2($elm$html$Html$Attributes$style, 'margin-top', '20%')
 		]);
+	var combinedStyle = _Utils_ap(
+		psuedoCanvasStyle,
+		_List_fromArray(
+			[
+				$author$project$Main$onMyClick($author$project$Main$ClickXY)
+			]));
 	return A2(
 		$elm$html$Html$div,
 		mainContainerStyle,
 		_List_fromArray(
 			[
-				A2($elm$html$Html$div, psuedoCanvasStyle, waves),
+				A2(
+				$elm$html$Html$div,
+				_List_Nil,
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$input,
+						_List_fromArray(
+							[
+								A2($elm$html$Html$Attributes$attribute, 'type', 'number'),
+								$elm$html$Html$Attributes$value(
+								$elm$core$String$fromInt(model.crestsPerWave)),
+								$elm$html$Html$Events$onInput($author$project$Main$NewCrestsPerWave)
+							]),
+						_List_Nil)
+					])),
+				A2(
+				$elm$html$Html$div,
+				_Utils_ap(
+					psuedoCanvasStyle,
+					_List_fromArray(
+						[
+							$author$project$Main$onMyClick($author$project$Main$ClickXY)
+						])),
+				waves),
 				A2(
 				$elm$html$Html$button,
 				_List_fromArray(
@@ -10897,7 +10976,7 @@ var $author$project$Main$view = function (model) {
 var $author$project$Main$main = $elm$browser$Browser$element(
 	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
 _Platform_export({'Main':{'init':$author$project$Main$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Main.XYPoint":{"args":[],"type":"{ x : Basics.Float, y : Basics.Float }"}},"unions":{"Main.Msg":{"args":[],"tags":{"Frame":["Time.Posix"],"ToggleRunState":[],"ClickXY":["Main.XYPoint"]}},"Basics.Float":{"args":[],"tags":{"Float":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}}}}})}});}(this));
+	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Main.XYPoint":{"args":[],"type":"{ x : Basics.Float, y : Basics.Float }"}},"unions":{"Main.Msg":{"args":[],"tags":{"Frame":["Time.Posix"],"ToggleRunState":[],"ClickXY":["Main.XYPoint"],"NewCrestsPerWave":["String.String"]}},"Basics.Float":{"args":[],"tags":{"Float":[]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"String.String":{"args":[],"tags":{"String":[]}},"Basics.Int":{"args":[],"tags":{"Int":[]}}}}})}});}(this));
 
   var app = Elm.Main.init({ node: document.getElementById("elm") });
 }
