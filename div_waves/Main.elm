@@ -1,6 +1,6 @@
 module Main exposing (..)
 
-import AnimationFrame exposing (diffs)
+--import AnimationFrame exposing (diffs)
 import Array exposing (..)
 import Debug exposing (log)
 import Html exposing (..)
@@ -9,6 +9,7 @@ import Html.Events exposing (..)
 import Json.Decode as Json
 import Time exposing (..)
 import Browser
+import Browser.Events as BrowserEvents
 
 
 type alias XYPoint =
@@ -33,8 +34,8 @@ type alias Model =
 
 
 type Msg
-    = Frame Time
-    | ToggleRunState
+    = Frame Posix | 
+    ToggleRunState
     | ClickXY XYPoint
 
 
@@ -59,18 +60,17 @@ main =
         }
 
 
-init : ( Model, Cmd Msg )
-init =
+init :() -> (Model, Cmd Msg)
+init _ =
     let
         minradius =
             settings.wavesettings.minradius
     in
-    ( { waves =
+    ( Model 
             [ Wave minradius (XYPoint 100 100) 50 0.8 2
             , Wave minradius (XYPoint 500 500) 30 0.8 3
             ]
-      , run = True
-      }
+        True
     , Cmd.none
     )
 
@@ -78,8 +78,8 @@ init =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Frame timediff ->
-            nextAnimationFrame model
+        Frame _ ->
+             nextAnimationFrame model
 
         ToggleRunState ->
             ( { model | run = not model.run }, Cmd.none )
@@ -115,8 +115,8 @@ view model =
         pauseBtnText =
             if model.run then "Pause" else "Resume"
     in
-    div [ style mainContainerStyle ]
-        [ div [ style psuedoCanvasStyle, onMyClick ClickXY ]
+    div mainContainerStyle
+        [ div psuedoCanvasStyle --, onMyClick ClickXY ]
             waves
         , button [ onClick ToggleRunState, disabled (List.length model.waves == 0) ]
             [ text pauseBtnText ]
@@ -125,9 +125,11 @@ view model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    if model.run then Sub.batch [ AnimationFrame.diffs Frame ]
+    if model.run then Sub.batch [ BrowserEvents.onAnimationFrame posixToMsg ]
     else Sub.none
 
+posixToMsg : Posix -> Msg
+posixToMsg = Frame
 
 -- when clicking in child div, incorporate offset of parent
 
@@ -173,23 +175,24 @@ waveView wave =
         wavestyle =
             [ --("border", (String.fromFloat <| wave.opacity / maxopacity * maxborder) ++ "px solid azure"
               style "border" "1px solid azure" 
-            , style "opacity" String.fromFloat wave.opacity 
-            , style "left" (String.fromFloat <| wave.center.x - wave.radius) ++ "px" 
-            , style "top" (String.fromFloat <| wave.center.y - wave.radius) ++ "px" 
-            , style "width" (String.fromFloat <| wave.radius * 2) ++ "px" 
-            , style "height" (String.fromFloat <| wave.radius * 2) ++ "px" 
+            , style "opacity" <| String.fromFloat wave.opacity
+            , style "left" <| (String.fromFloat <| wave.center.x - wave.radius) ++ "px" 
+            , style "top" <| (String.fromFloat <| wave.center.y - wave.radius) ++ "px" 
+            , style "width" <| (String.fromFloat <| wave.radius * 2) ++ "px" 
+            , style "height" <| (String.fromFloat <| wave.radius * 2) ++ "px" 
             , style "background" "transparent" 
             , style "border-radius" "50%" 
             , style "position" "absolute"
             ]
     in
     div
-        [ style wavestyle
-        , onWithOptions
-            "click"
-            { stopPropagation = True, preventDefault = True }
-            (Json.map ClickXY childdivdecoder)
-        ]
+        wavestyle
+        -- [ style wavestyle
+        -- , onWithOptions
+        --     "click"
+        --     { stopPropagation = True, preventDefault = True }
+        --     (Json.map ClickXY childdivdecoder)
+        -- ]
         []
 
 
